@@ -8,13 +8,11 @@ using System.Threading.Tasks;
 
 namespace CityEvents.Service.Interface
 {
-    public interface IEventReservationRepository
+    public interface IEventReservationService
     {
-        Task<bool> AddReservation(EventReservationEntity reservation);
-        Task<IEnumerable<EventReservationEntity>> GetReservationByNameAndEventTitle(string name, string eventTitle);
+        Task<bool> AddReservation(EventReservationDto reservation);
+        Task<IEnumerable<EventReservationDto>> GetReservation(string name, string eventTitle);
         Task<bool> DeleteReservation(long id);
         Task<bool> UpdateReservationAmount(long id, int amount);
-
-        Task<bool> ValidateEventStatus(long eventId);
     }
 }

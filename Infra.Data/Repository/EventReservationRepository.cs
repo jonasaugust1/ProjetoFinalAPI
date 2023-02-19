@@ -1,4 +1,5 @@
-﻿using CityEvents.Service.Entity;
+﻿using CityEvents.Service.DTO;
+using CityEvents.Service.Entity;
 using CityEvents.Service.Interface;
 using Dapper;
 using MySqlConnector;
@@ -14,42 +15,57 @@ namespace CityEvents.Infra.Data.Repository
     public class EventReservationRepository : IEventReservationRepository
     {
         private readonly string _stringConnection;
-        EventReservationRepository()
+        public EventReservationRepository()
         {
             _stringConnection = Environment.GetEnvironmentVariable("DATABASE_CONFIG");
         }
-        public void ConsultaReserva(string nome, string tituloEvento)
+        public async Task<IEnumerable<EventReservationEntity>> GetReservationByNameAndEventTitle(string name, string eventTitle)
         {
-            string query = "SELECT * FROM eventReservation INNER JOIN CityEvent ON CityEvent.IdEvent = EventReservation.IdEvent WHERE PersonName = @nome AND Title LIKE @%tituloEvento%;";
+            string query = "SELECT * FROM EventReservation  INNER JOIN CityEvent ON CityEvent.IdEvent = EventReservation.IdEvent WHERE PersonName = @nome  AND Title LIKE @titulo";
+            DynamicParameters param = new();
+            eventTitle = $"%{eventTitle}%";
+            param.Add("nome", name);
+            param.Add("titulo", eventTitle);
+            using MySqlConnection conn = new(_stringConnection);
+            return conn.Query<EventReservationEntity>(query, param).ToList();
         }
 
-        public bool DeletaReserva(int id)
+        public async Task<bool> DeleteReservation(long id)
         {
             string query = "DELETE FROM EventReservation where id = @id";
-            DynamicParameters parametro = new(id);
+            DynamicParameters param = new(id);
             using MySqlConnection conn = new(_stringConnection);
-            int linhasAfetadas = conn.Execute(query, parametro);
-            return linhasAfetadas > 0;
+            int rowsAffected = await conn.ExecuteAsync(query, param);
+            return rowsAffected > 0;
         }
 
-        public bool EditarQuantidadeReserva(int id, int quantidade)
+        public async Task<bool> UpdateReservationAmount(long id, int quantity)
         {
             string query = "UPDATE EventReservation SET Quantity = @quantidade where idReservation = @id";
-            DynamicParameters parametro = new(id);
-            parametro.Add("quantidade", quantidade);
+            DynamicParameters param = new(id);
+            param.Add("quantidade", quantity);
             using MySqlConnection conn = new(_stringConnection);
-            int linhasAfetadas = conn.Execute(query, parametro);
-            return linhasAfetadas > 0;
+            int rowsAffected = await conn.ExecuteAsync(query, param);
+            return rowsAffected > 0;
         }
 
-        public bool AdicionarReserva(EventReservationEntity reserva, int idEvento)
+        public async Task<bool> AddReservation(EventReservationEntity reservation)
         {
             string query = "INSERT INTO EventReservation (IdEvent,PersonName,Quantity) VALUES (@IdEvent,@PersonName,@Quantity)";
-            DynamicParameters parametro = new(reserva);
-            parametro.Add("IdEvent", idEvento);
+            DynamicParameters param = new(reservation);
             using MySqlConnection conn = new(_stringConnection);
-            int linhasAfetadas = conn.Execute(query, parametro);
-            return linhasAfetadas > 0;
+            int rowsAffected = await conn.ExecuteAsync(query, param);
+            return rowsAffected > 0;
+        }
+
+        public async Task<bool> ValidateEventStatus(long eventId)
+        {
+            string query = "SELECT * FROM CityEvent where idEvent = @idEvento";
+            DynamicParameters param = new();
+            param.Add("idEvento", eventId);
+            using MySqlConnection conn = new(_stringConnection);
+            var value = await conn.QueryFirstOrDefaultAsync<CityEventDto>(query, param);
+            return value.Status;
         }
     }
 }

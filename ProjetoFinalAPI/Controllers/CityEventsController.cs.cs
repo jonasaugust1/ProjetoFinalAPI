@@ -1,6 +1,8 @@
+using CityEvents.Service.DTO;
 using CityEvents.Service.Entity;
 using CityEvents.Service.Interface;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace CityEvents.Controllers
 {
@@ -10,39 +12,39 @@ namespace CityEvents.Controllers
     [Produces("application/json")]
     public class CityEventsController : ControllerBase
     {
-        private ICityEventRepository _cityEventRepository;
+        private ICityEventService _cityEventService;
 
-        public CityEventsController(ICityEventRepository cityEventRepository)
+        public CityEventsController(ICityEventService cityEventService)
         {
-            _cityEventRepository = cityEventRepository;
+            _cityEventService = cityEventService;
         }
 
         [HttpGet("ConsultaPorPrecoEData")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public ActionResult<CityEventsEntity> GetConsultaPorPrecoData(double precoMin, double precoMax, DateTime data)
+        public ActionResult<CityEventsEntity> GetEventByPriceAndDate(decimal minPrice, decimal maxPrice, DateTime date)
         {
-            return Ok(_cityEventRepository.ConsultaPorPrecoEData(precoMin, precoMax, data));
+            return Ok(_cityEventService.GetEventByPriceAndDate(minPrice, maxPrice, date));
         }
 
         [HttpGet("ConsultaPorLocalEData")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public ActionResult<CityEventsEntity> GetConsultaPorLocalEData(string local, DateTime data)
+        public ActionResult<CityEventsEntity> GetEventByLocalAndDate(string local, DateTime data)
         {
-            return Ok(_cityEventRepository.ConsultaPorLocalEData(local, data));
+            return Ok(_cityEventService.GetEventByLocalAndDate(local, data));
         }
 
         [HttpGet("ConsultaPorTitulo")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public ActionResult<CityEventsEntity> GetConsultaPorTitulo(string titulo)
+        public ActionResult<CityEventsEntity> GetEventByTitle(string titulo)
         {
-            return Ok(_cityEventRepository.ConsultaPorTitulo(titulo));
+            return Ok(_cityEventService.GetEventByTitle(titulo));
         }
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public ActionResult<CityEventsEntity> Inserir(CityEventsEntity entity)
+        public async Task<ActionResult<CityEventsEntity>> AddEvent(CityEventDto entity)
         {
-            if (!_cityEventRepository.AdicionarEvento(entity))
+            if (!await _cityEventService.AddEvent(entity))
             {
                 return BadRequest();
             }
@@ -52,20 +54,27 @@ namespace CityEvents.Controllers
         [HttpPut]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public ActionResult<CityEventsEntity> EditarEvento(CityEventsEntity entity, int id)
+        public async Task<ActionResult<CityEventsEntity>> UpdateEvent(CityEventDto entity, long id)
         {
-            if (!_cityEventRepository.EditarEvento(entity, id))
+            if (!await _cityEventService.UpdateEvent(entity, id))
             {
                 return BadRequest();
             }
             return Ok(entity);
         }
 
-        // Pensar e construir o delete.
+        [Authorize(Roles = "admin")]
+        [HttpDelete]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> DeleteOrInativateEvent([FromQuery] long id)
+        {
 
-        //[HttpDelete]
-        //[ProducesResponseType(StatusCodes.Status201Created)]
-        //[ProducesResponseType(StatusCodes.Status400BadRequest)]
-        //public ActionResult<CityEventsEntity> 
+            if (!await _cityEventService.DeleteOrInativateEvent(id))
+            {
+                return BadRequest();
+            }
+            return NoContent();
+        }
     }
 }

@@ -1,6 +1,9 @@
-﻿using CityEvents.Service.Entity;
+﻿using CityEvents.Service.DTO;
+using CityEvents.Service.Entity;
 using CityEvents.Service.Interface;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Data;
 
 namespace CityEvents.Controllers
 {
@@ -10,26 +13,26 @@ namespace CityEvents.Controllers
     [Produces("application/json")]
     public class EventReservationController : ControllerBase
     {
-        private IEventReservationRepository _eventReservationRepository;
+        private IEventReservationService _eventReservationService;
 
-        public EventReservationController(IEventReservationRepository eventReservationRepository)
+        public EventReservationController(IEventReservationService eventReservationService)
         {
-            _eventReservationRepository = eventReservationRepository;
+            _eventReservationService = eventReservationService;
         }
 
         [HttpGet("ConsultaReserva")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public ActionResult<EventReservationEntity> GetConsultaReserva(string name, string eventTitle)
+        public ActionResult<EventReservationEntity> GetReservation(string name, string eventTitle)
         {
-            return Ok(_eventReservationRepository.ConsultaReserva(name, eventTitle));
+            return Ok(_eventReservationService.GetReservation(name, eventTitle));
         }
 
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public ActionResult<EventReservationEntity> Inserir(EventReservationEntity entity, long eventId)
+        public async  Task<ActionResult<EventReservationEntity>> AddReservation(EventReservationDto entity)
         {
-            if (!_eventReservationRepository.AdicionarReserva(entity, eventId))
+            if (!await _eventReservationService.AddReservation(entity))
             {
                 return BadRequest();
             }
@@ -39,13 +42,26 @@ namespace CityEvents.Controllers
         [HttpPut]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public ActionResult<EventReservationEntity> EditarEvento(long id, int amount)
+        public async Task<ActionResult<EventReservationEntity>> UpdateReservationAmount(long id, int amount)
         {
-            if (!_eventReservationRepository.EditarQuantidadeReserva(id, amount))
+            if (!await _eventReservationService.UpdateReservationAmount(id, amount))
             {
                 return BadRequest();
             }
             return Ok();
+        }
+
+        [HttpDelete]
+        [Authorize(Roles = "admin")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult> DeleteReservation([FromQuery] long id)
+        {
+            if (!await _eventReservationService.DeleteReservation(id))
+            {
+                return BadRequest();
+            }
+            return NoContent();
         }
     }
 }
